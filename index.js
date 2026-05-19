@@ -37,6 +37,49 @@ async function run() {
  
  
   
+    // POST 
+    app.post("/ideas", async (req, res) => {
+      const idea = req.body;
+      idea.createdAt = new Date();
+      const result = await ideasCollection.insertOne(idea);
+      res.send(result);
+    });
+ 
+    // GET /ideas 
+    app.get("/ideas", async (req, res) => {
+      const { search, category, startDate, endDate } = req.query;
+ 
+      const filter = {};
+ 
+     
+      if (search) {
+        filter.title = { $regex: search, $options: "i" };
+      }
+ 
+      
+      if (category) {
+        filter.category = category;
+      }
+ 
+      
+      if (startDate || endDate) {
+        filter.createdAt = {};
+        if (startDate) filter.createdAt.$gte = new Date(startDate);
+        if (endDate) filter.createdAt.$lte = new Date(endDate);
+      }
+ 
+      const ideas = await ideasCollection
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .toArray();
+ 
+      res.send(ideas);
+    }); 
+
+
+
+
+
 
  
 
