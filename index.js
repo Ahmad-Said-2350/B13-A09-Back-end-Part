@@ -1,15 +1,22 @@
-// const dns = require("node:dns");
-// dns.setServers(["8.8.8.8", "8.8.4.4"]);
+const dns = require("node:dns");
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 const express = require("express");
 const cors = require("cors");
 const env = require("dotenv").config();
+
+const jwt = require("jsonwebtoken");
+
 
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors());
+
+
 app.use(express.json());
+
 
 
 
@@ -25,6 +32,36 @@ const client = new MongoClient(uri, {
   }
 });
 console.log(process.env.MONGODB_URI)
+
+
+
+const JWKS = createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`));
+
+const verifyToken = async (req, res, next) => {
+  const authHeader = req?.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    console.log(payload);
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+};
+
+
+
+
+
+
+
 async function run() {
   try {
     
@@ -35,7 +72,14 @@ async function run() {
     const ideasCollection = db.collection("collectionIdeaVault");
     const commentsCollection = db.collection("comments");
  
- 
+
+
+
+
+
+
+
+
   
     // POST 
     app.post("/ideas", async (req, res) => {
@@ -80,9 +124,22 @@ async function run() {
     }); 
 
 
+//trending — :id 
+    app.get("/ideas/trending", async (req, res) => {
+      const ideas = await ideasCollection
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .toArray();
+      res.send(ideas);
+    });
+
+    
+
+
 
 //  my-ideas 
-    app.get("/ideas/my-ideas", async (req, res) => {
+    app.get("/ideas/my-ideas", verifyToken, async (req, res) => {
       const email = req.query.email;
       const ideas = await ideasCollection
         .find({ postedBy: email })
@@ -99,7 +156,7 @@ async function run() {
 
 
  // GET /ideas/:id  details
-    app.get("/ideas/:id", async (req, res) => {
+    app.get("/ideas/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const idea = await ideasCollection.findOne({
         _id: new ObjectId(id),
@@ -111,8 +168,12 @@ async function run() {
     });
 
 
+
+
+
+
 // PUT /ideas/:id  idea update
-app.put("/ideas/:id", async (req, res) => {
+app.put("/ideas/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
   const updatedData = req.body;
   delete updatedData._id;
@@ -124,14 +185,14 @@ app.put("/ideas/:id", async (req, res) => {
 });
 
 // DELETE /ideas/:id  idea delete
-app.delete("/ideas/:id", async (req, res) => {
+app.delete("/ideas/:id",verifyToken,  async (req, res) => {
   const id = req.params.id;
   const result = await ideasCollection.deleteOne({ _id: new ObjectId(id) });
   res.send(result);
 });
 
 // POST /comments  comment add
-app.post("/comments", async (req, res) => {
+app.post("/comments", verifyToken, async (req, res) => {
   const comment = req.body;
   comment.createdAt = new Date();
   const result = await commentsCollection.insertOne(comment);
@@ -139,8 +200,8 @@ app.post("/comments", async (req, res) => {
 });
 
 
-// GET /comments/:ideaId   idea র সব comment
-app.get("/comments/:ideaId", async (req, res) => {
+// GET /comments/:ideaId   
+app.get("/comments/:ideaId",   async (req, res) => {
   const ideaId = req.params.ideaId;
   const comments = await commentsCollection
     .find({ ideaId: ideaId })
@@ -150,7 +211,7 @@ app.get("/comments/:ideaId", async (req, res) => {
 });
 
 // PUT /comments/:id comment edit
-app.put("/comments/:id", async (req, res) => {
+app.put("/comments/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
   const { text } = req.body;
   const result = await commentsCollection.updateOne(
@@ -161,7 +222,7 @@ app.put("/comments/:id", async (req, res) => {
 });
 
 // DELETE /comments/:id  comment delete
-app.delete("/comments/:id", async (req, res) => {
+app.delete("/comments/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
   const result = await commentsCollection.deleteOne({ _id: new ObjectId(id) });
   res.send(result);
@@ -169,7 +230,7 @@ app.delete("/comments/:id", async (req, res) => {
 
 // GET /comments/my-comments/all  My Interactions
 
-app.get("/comments/user/all", async (req, res) => {
+app.get("/comments/user/all", verifyToken,  async (req, res) => {
   const email = req.query.email;
   const comments = await commentsCollection
     .find({ userEmail: email })
@@ -186,12 +247,6 @@ app.get("/comments/user/all", async (req, res) => {
   );
   res.send(commentedIdeas);
 });
-
-
-
-
-
-
 
 
 
