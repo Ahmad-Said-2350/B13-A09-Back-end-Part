@@ -13,7 +13,7 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = process.env.MONGODB_URI
 
 
@@ -45,6 +45,9 @@ async function run() {
       res.send(result);
     });
  
+
+
+
     // GET /ideas 
     app.get("/ideas", async (req, res) => {
       const { search, category, startDate, endDate } = req.query;
@@ -77,8 +80,22 @@ async function run() {
     }); 
 
 
+ // GET /ideas/:id  details
+    app.get("/ideas/:id", async (req, res) => {
+      const id = req.params.id;
+      const idea = await ideasCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      if (!idea) {
+        return res.status(404).send({ message: "Idea not found" });
+      }
+      res.send(idea);
+    });
 
 
+
+
+    
 
 
  
