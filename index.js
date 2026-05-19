@@ -80,6 +80,24 @@ async function run() {
     }); 
 
 
+
+//  my-ideas 
+    app.get("/ideas/my-ideas", async (req, res) => {
+      const email = req.query.email;
+      const ideas = await ideasCollection
+        .find({ postedBy: email })
+        .sort({ createdAt: -1 })
+        .toArray();
+      res.send(ideas);
+    });
+
+
+
+
+
+
+
+
  // GET /ideas/:id  details
     app.get("/ideas/:id", async (req, res) => {
       const id = req.params.id;
@@ -93,9 +111,89 @@ async function run() {
     });
 
 
+// PUT /ideas/:id  idea update
+app.put("/ideas/:id", async (req, res) => {
+  const id = req.params.id;
+  const updatedData = req.body;
+  delete updatedData._id;
+  const result = await ideasCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: updatedData }
+  );
+  res.send(result);
+});
+
+// DELETE /ideas/:id  idea delete
+app.delete("/ideas/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await ideasCollection.deleteOne({ _id: new ObjectId(id) });
+  res.send(result);
+});
+
+// POST /comments  comment add
+app.post("/comments", async (req, res) => {
+  const comment = req.body;
+  comment.createdAt = new Date();
+  const result = await commentsCollection.insertOne(comment);
+  res.send(result);
+});
 
 
-    
+// GET /comments/:ideaId   idea র সব comment
+app.get("/comments/:ideaId", async (req, res) => {
+  const ideaId = req.params.ideaId;
+  const comments = await commentsCollection
+    .find({ ideaId: ideaId })
+    .sort({ createdAt: 1 })
+    .toArray();
+  res.send(comments);
+});
+
+// PUT /comments/:id comment edit
+app.put("/comments/:id", async (req, res) => {
+  const id = req.params.id;
+  const { text } = req.body;
+  const result = await commentsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { text: text, updatedAt: new Date() } }
+  );
+  res.send(result);
+});
+
+// DELETE /comments/:id  comment delete
+app.delete("/comments/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await commentsCollection.deleteOne({ _id: new ObjectId(id) });
+  res.send(result);
+});
+
+// GET /comments/my-comments/all  My Interactions
+
+app.get("/comments/user/all", async (req, res) => {
+  const email = req.query.email;
+  const comments = await commentsCollection
+    .find({ userEmail: email })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  const commentedIdeas = await Promise.all(
+    comments.map(async (comment) => {
+      const idea = await ideasCollection.findOne({
+        _id: new ObjectId(comment.ideaId),
+      });
+      return { comment, idea };
+    })
+  );
+  res.send(commentedIdeas);
+});
+
+
+
+
+
+
+
+
 
 
  
