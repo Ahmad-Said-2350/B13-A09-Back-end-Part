@@ -82,7 +82,7 @@ async function run() {
 
   
     // POST 
-    app.post("/ideas", async (req, res) => {
+    app.post("/ideas", verifyToken, async (req, res) => {
       const idea = req.body;
       idea.createdAt = new Date();
       const result = await ideasCollection.insertOne(idea);
@@ -232,6 +232,7 @@ app.delete("/comments/:id", verifyToken, async (req, res) => {
 
 app.get("/comments/user/all", verifyToken,  async (req, res) => {
   const email = req.query.email;
+  console.log(email)
   const comments = await commentsCollection
     .find({ userEmail: email })
     .sort({ createdAt: -1 })
