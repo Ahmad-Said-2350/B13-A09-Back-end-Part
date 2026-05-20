@@ -196,6 +196,14 @@ app.post("/comments", verifyToken, async (req, res) => {
   const comment = req.body;
   comment.createdAt = new Date();
   const result = await commentsCollection.insertOne(comment);
+
+
+  await ideasCollection.updateOne(
+    { _id: new ObjectId(comment.ideaId) },
+    { $inc: { commentCount: 1 } }
+  );
+
+
   res.send(result);
 });
 
@@ -221,12 +229,39 @@ app.put("/comments/:id", verifyToken, async (req, res) => {
   res.send(result);
 });
 
-// DELETE /comments/:id  comment delete
+
+
+
+
+
+// comment delete
+
 app.delete("/comments/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
-  const result = await commentsCollection.deleteOne({ _id: new ObjectId(id) });
+
+  
+  const comment = await commentsCollection.findOne({
+    _id: new ObjectId(id),
+  });
+
+  const result = await commentsCollection.deleteOne({
+    _id: new ObjectId(id),
+  });
+
+ 
+  if (comment) {
+    await ideasCollection.updateOne(
+      { _id: new ObjectId(comment.ideaId) },
+      { $inc: { commentCount: -1 } }
+    );
+  }
+
   res.send(result);
 });
+
+
+
+
 
 // GET /comments/my-comments/all  My Interactions
 
