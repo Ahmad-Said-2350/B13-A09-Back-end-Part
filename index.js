@@ -155,7 +155,7 @@ async function run() {
 
 
 
- // GET /ideas/:id  details
+ // GET /ideas/:id  
     app.get("/ideas/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const idea = await ideasCollection.findOne({
@@ -217,6 +217,9 @@ app.get("/comments/:ideaId",   async (req, res) => {
     .toArray();
   res.send(comments);
 });
+
+
+
 
 // PUT /comments/:id comment edit
 app.put("/comments/:id", verifyToken, async (req, res) => {
